@@ -1,18 +1,18 @@
 ---
-title: "Практическая работа №2"
+title: "Практическая работа №1"
 author: "Давыдова Дарья БИСО-01-20"
 format: 
   md:
     output-file: README.md
 ---
-# Основы обработки данных с помощью R с использованием пакета dplyr.
 
+# Основы обработки данных с помощью R с использованием пакета dplyr.
 
 ## Цель работы
 
-1. Развить практические навыки использования языка программирования R для обработки данных;
-2. Закрепить знания базовых типов данных языка R;
-3. Развить пркатические навыки использования функций обработки данных пакета dplyr – функции `select()`, `filter()`, `mutate()`, `arrange()`, `group_by()`.
+1.  Развить практические навыки использования языка программирования R для обработки данных;
+2.  Закрепить знания базовых типов данных языка R;
+3.  Развить пркатические навыки использования функций обработки данных пакета dplyr -- функции `select()`, `filter()`, `mutate()`, `arrange()`, `group_by()`.
 
 ## Исходные данные
 
@@ -29,7 +29,8 @@ format:
 ## Ход выполнения работы
 
 Для начала, установим пакет `dplyr`. Его можно установить в RStudio с помощью команды `install.packages("dplyr")`. После этого подключим пакет к текущему проекту с помощью `library(dplyr)`.
-```
+
+```         
 > install.packages("dplyr")
 
 WARNING: Rtools is required to build R packages but is not currently installed. Please download and install the appropriate version of Rtools before proceeding:
@@ -44,10 +45,10 @@ downloaded 1.5 MB
 пакет ‘dplyr’ успешно распакован, MD5-суммы проверены
 
 Скачанные бинарные пакеты находятся в
-	C:\Users\Даша\AppData\Local\Temp\Rtmpsbt1fc\downloaded_packages
-	
-	
-	
+    C:\Users\Даша\AppData\Local\Temp\Rtmpsbt1fc\downloaded_packages
+    
+    
+    
 > library(dplyr)
 
 Присоединяю пакет: ‘dplyr’
@@ -67,7 +68,8 @@ downloaded 1.5 MB
 ***Вопросы:***
 
 №1. Сколько строк в датафрейме?
-```
+
+```         
 > starwars %>% nrow()
 
 [1] 87
@@ -75,14 +77,15 @@ downloaded 1.5 MB
 
 №2. Сколько столбцов в датафрейме?
 
-```
+```         
 > starwars %>% ncol()
 
 [1] 14
 ```
 
 №3. Как просмотреть примерный вид датафрейма?
-```
+
+```         
 > starwars %>% glimpse()
 
 Rows: 87
@@ -105,7 +108,7 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 
 №4. Сколько уникальных рас персонажей (species) представлено в данных?
 
-```
+```         
 > starwars %>% select(species) %>% unique()
 
 # A tibble: 38 × 1
@@ -126,7 +129,8 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 ```
 
 Выведем на экран все 28 строк, в которых содержится результат работы команды.
-```
+
+```         
 > starwars %>% select(species) %>% unique() %>% print(n = 38)
 
 # A tibble: 38 × 1
@@ -173,7 +177,8 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 ```
 
 №5. Найти самого высокого персонажа.
-```
+
+```         
 > starwars %>% filter(height == max(height, na.rm = TRUE)) %>% select(name, height)
 
 # A tibble: 1 × 2
@@ -183,7 +188,8 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 ```
 
 №6. Найти всех персонажей ниже 170
-```
+
+```         
 > starwars %>% select(name, height) %>% filter(height < 170) %>% print(n = 23)
 
 # A tibble: 23 × 2
@@ -214,9 +220,9 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 23 Padmé Amidala            165
 ```
 
-№7. Подсчитать ИМТ (индекс массы тела) для всех персонажей. ИМТ подсчитать по формуле 𝐼 = 𝑚
-ℎ2 , где 𝑚 – масса (weight), а ℎ – рост (height).
-```
+№7. Подсчитать ИМТ (индекс массы тела) для всех персонажей. ИМТ подсчитать по формуле 𝐼 = 𝑚 ℎ2 , где 𝑚 -- масса (weight), а ℎ -- рост (height).
+
+```         
 > starwars %>% mutate(BMI = mass / ((height / 100) ^ 2)) %>% select(name, BMI)
 
 # A tibble: 87 × 2
@@ -237,7 +243,8 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 ```
 
 Выведем на экран все 87 строк, в которых содержится результат работы команды.
-```
+
+```         
 > starwars %>% mutate(BMI = mass / ((height / 100) ^ 2)) %>% select(name, BMI) %>% print(n = 87)
 
 # A tibble: 87 × 2
@@ -332,8 +339,9 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 87 Padmé Amidala          16.5
 ```
 
-№8. Найти 10 самых “вытянутых” персонажей. “Вытянутость” оценить по отношению массы (mass) к росту (height) персонажей.
-```
+№8. Найти 10 самых "вытянутых" персонажей. "Вытянутость" оценить по отношению массы (mass) к росту (height) персонажей.
+
+```         
 > starwars %>% mutate(long_per = mass / height) %>% arrange(desc(long_per)) %>% head(10) %>% select(name, long_per)
 
 # A tibble: 10 × 2
@@ -352,7 +360,8 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 ```
 
 №9. Найти средний возраст персонажей каждой расы вселенной Звездных войн.
-```
+
+```         
 > starwars %>% group_by(species) %>% summarise(mean(birth_year, na.rm = TRUE))
 # A tibble: 38 × 2
    species   `mean(birth_year, na.rm = TRUE)`
@@ -372,7 +381,8 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 ```
 
 Выведем на экран все 38 строк, в которых содержится результат работы команды.
-```
+
+```         
 > starwars %>% group_by(species) %>% summarise(mean(birth_year, na.rm = TRUE)) %>% print(n = 38)
 # A tibble: 38 × 2
    species        `mean(birth_year, na.rm = TRUE)`
@@ -418,7 +428,8 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 ```
 
 №10. Найти самый распространенный цвет глаз персонажей вселенной Звездных войн.
-```
+
+```         
 > starwars %>% count(eye_color) %>% filter(n == max(n))
 
 # A tibble: 1 × 2
@@ -428,7 +439,8 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 ```
 
 №11. Подсчитать среднюю длину имени в каждой расе вселенной Звездных войн.
-```
+
+```         
 > starwars %>% group_by(species) %>% summarise(avg_name_len = mean(nchar(name)))
 # A tibble: 38 × 2
    species   avg_name_len
@@ -448,7 +460,8 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 ```
 
 Выведем на экран все 38 строк, в которых содержится результат работы команды.
-```
+
+```         
 > starwars %>% group_by(species) %>% summarise(avg_name_len = mean(nchar(name))) %>% print(n = 38)
 
 # A tibble: 38 × 2
@@ -500,12 +513,7 @@ $ starships  <list> <"X-wing", "Imperial shuttle">, <>, <>, "TIE Advanced x1", <
 
 ## Вывод
 
-Были получены базовые навыки обработки данных с помощью языка R и встроенного пакета `dplyr`.
----
-title: "lab_2"
-format: html
-editor: visual
----
+Были получены базовые навыки обработки данных с помощью языка R и встроенного пакета `dplyr`. 31b8e172-b470-440e-83d8-e6b185028602:dAB5AHAAZQA6AFoAUQBBAHgAQQBEAGcAQQBNAFEAQQA1AEEARABZAEEATQBBAEEAMQBBAEMAMABBAE0AQQBCAGgAQQBHAE0AQQBaAEEAQQB0AEEARABRAEEAWgBnAEIAaABBAEcAVQBBAEwAUQBBADQAQQBHAEkAQQBPAFEAQQA1AEEAQwAwAEEATwBRAEIAagBBAEQARQBBAFkAZwBBADMAQQBHAEkAQQBaAEEAQQAzAEEARwBNAEEATQBBAEIAbQBBAEQARQBBAAoAcABvAHMAaQB0AGkAbwBuADoATQBRAEEAMgBBAEQAZwBBAE4AQQBBADAAQQBBAD0APQAKAHAAcgBlAGYAaQB4ADoACgBzAG8AdQByAGMAZQA6AEwAUQBBAHQAQQBDADAAQQBDAGcAQgAwAEEARwBrAEEAZABBAEIAcwBBAEcAVQBBAE8AZwBBAGcAQQBDAEkAQQBiAEEAQgBoAEEARwBJAEEAWAB3AEEAeQBBAEMASQBBAEMAZwBCAG0AQQBHADgAQQBjAGcAQgB0AEEARwBFAEEAZABBAEEANgBBAEMAQQBBAGEAQQBCADAAQQBHADAAQQBiAEEAQQBLAEEARwBVAEEAWgBBAEIAcABBAEgAUQBBAGIAdwBCAHkAQQBEAG8AQQBJAEEAQgAyAEEARwBrAEEAYwB3AEIAMQBBAEcARQBBAGIAQQBBAEsAQQBDADAAQQBMAFEAQQB0AEEAQQA9AD0ACgBzAHUAZgBmAGkAeAA6AA==:31b8e172-b470-440e-83d8-e6b185028602
 
 ## Quarto
 
