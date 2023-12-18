@@ -7,8 +7,6 @@ format:
 editor: visual
 ---
 
-Исследование метаданных DNS трафика
-
 ## Цель
 
 1.  Закрепить практические навыки использования языка программирования R для обработки данных
@@ -31,7 +29,7 @@ editor: visual
 
 ### Шаг 1. Подготовка данных
 
-Для начала установим пакет `dplyr`
+Установка пакета `dplyr`
 
 ```{r}
 library(dplyr)
@@ -40,11 +38,8 @@ library(dplyr)
 1.  Импортируйте данные DNS
 
 ```{r}
-library('dplyr')
-library('tidyverse')
-dns <- read_tsv("dns.log")
-
-dns
+	dns = read.csv("dns.log", header = FALSE, sep = "\t", encoding = "UTF-8")
+	dns %>% glimpse()
 ```
 
 2.  Добавьте пропущенные данные о структуре данных (назначении столбцов)
@@ -65,17 +60,23 @@ dns$ts <- dns$ts %>% as.ts()
 
 4.  Просмотрите общую структуру данных с помощью функции glimpse()
 
-    ```{r}
-    data %>% glimpse()
-    ```
+```{r}
+	dns %>% glimpse()
+```
 
 ### Шаг 2. Анализ данных
 
 ##### Задание 1. Сколько участников информационного обмена в сети Доброй Организации?
 
 ```{r}
-select(dns,uid) %>% group_by(uid) %>% count() %>% nrow()
+or_h <- unique(dns$`id_or_h`)
+re_h <- unique(dns$`id_re_h`)
 
+hosts <- c(or_h, re_h)
+
+hosts %>%
+  unique() %>%
+  length()
 ```
 
 ##### Задание 2. Какое соотношение участников обмена внутри сети и участников обращений к внешним ресурсам?
@@ -88,57 +89,84 @@ select(dns,uid) %>% group_by(uid) %>% count() %>% nrow()
 4.  192.168.0.0 - 192.168.255.255
 
 ```{r}
-#a <- filter(dns, query != '-',query == '(empty)') %>% group_by(uid) %>% count() %>% nrow()
-a <- filter(dns, qtype_name == 'A'| qtype_name == 'AA' | qtype_name =='AAA' | qtype_name == 'AAAA') %>% group_by(uid) %>% count() %>% nrow() 
-b <- filter(dns, qtype_name != 'A', qtype_name !='AA', qtype_name !='AAA', qtype_name !='AAAA') %>% group_by(uid) %>% count() %>% nrow()
-#b <- filter(dns, query !='-',query != '(empty)') %>% group_by(uid) %>% count() %>% nrow()
-b/a
+internal_ip_pattern <- c("192.168.", "10.", "100.([6-9]|1[0-1][0-9]|12[0-7]).", "172.((1[6-9])|(2[0-9])|(3[0-1])).")
+internal_ips <- hosts[grep(paste(internal_ip_pattern, collapse = "|"), hosts)]
+internal_ips_cnt <- sum(hosts %in% internal_ips)
+external_ips_cnt <- length(hosts) - internal_ips_cnt
+
+ratio <- internal_ips_cnt / external_ips_cnt
+ratio
 ```
 
 ##### Задание 3. Найдите топ-10 участников сети, проявляющих наибольшую сетевую активность
 
 ```{r}
-select(dns,uid) %>% group_by(uid) %>% count() %>% arrange(desc(n)) %>% head(10)
+top_hosts <- dns %>%
+  group_by(id_or_h) %>%
+  summarise(request_count = n()) %>%
+  arrange(desc(request_count)) %>%
+  top_n(10, request_count)
 
+print(top_hosts)
 ```
 
 ##### Задание 4. Найдите топ-10 доменов, к которым обращаются пользователи сети и соответственное количество обращений
 
 ```{r}
-top_dom <- dns %>% filter(query !='-', qtype_name == 'A'| qtype_name == 'AA' | qtype_name =='AAA' | qtype_name == 'AAAA') %>% select(query) %>% group_by(query) %>% count() %>% arrange(desc(n)) %>% head(10)
-top_dom
+top_domains <- dns %>%
+  group_by(query) %>%
+  summarise(request_count = n()) %>%
+  arrange(desc(request_count)) %>%
+  top_n(10, request_count)
+
+print(top_domains)
 ```
 
 ##### Задание 5. Опеределите базовые статистические характеристики (функция summary()) интервала времени между последовательным обращениями к топ-10 доменам.
 
 ```{r}
+top_domains_filtered <- dns %>% 
+  filter(tolower(query) %in% top_domains$query) %>%
+  arrange(ts)
+time_intervals <- diff(top_domains_filtered$ts)
 
-summary(diff((dns %>% filter(tolower(query) %in% top_dom$query) %>% arrange(ts))$ts))
-#dns %>% filter(query !='-',ts !='NA') %>% select(query,mean(ts)) %>% group_by(query) %>% count() %>% arrange(desc(n)) %>% head(10)
+summary(time_intervals)
 ```
 
 ##### Задание 6. Часто вредоносное программное обеспечение использует DNS канал в качестве канала управления, периодически отправляя запросы на подконтрольный злоумышленникам DNS сервер. По периодическим запросам на один и тот же домен можно выявить скрытый DNS канал. Есть ли такие IP адреса в исследуемом датасете?
 
-```{R}
-t <- dns %>% group_by(id_or_h, query) %>% summarise(total = n()) %>% filter(total > 1)
-unique(t$id_or_h)%>% head()
+```{r}
+ip_domain_counts <- dns %>%
+  group_by(ip = `id_or_h`, query) %>%
+  summarise(request_count = n()) %>%
+  filter(request_count > 1)
+```
 
+```{r}
+unique_ips_with_periodic_requests <- unique(ip_domain_counts$ip)
+
+unique_ips_with_periodic_requests %>% length()
+unique_ips_with_periodic_requests %>% head()
 ```
 
 ## Шаг 3. Обогащение данных
 
 ##### Определите местоположение (страну, город) и организацию-провайдера для топ-10 доменов. Для этого можно использовать сторонние сервисы, например https://v4.ifconfig.co.
-    
-1. teredo.ipv6.microsoft.com - США, Де-Мойн
-2. tools.google.com - США, Маунтин-Вью
-3. www.apple.com - США, Купертино
-4. safebrowsing.clients.google.com - США, Маунтин-Вью
-5. imap.gmail.com - США, Истон
-6. stats.norton.com - Великобритания, Вашингтон
-7. www.google.com - США, Моунтайн-Вью
-8. ratings-wrs.symantec.com - США, Редмонд
-9. api.twitter.com - США, Сан-Франциско
-10. api.facebook.com - США, Менло-Парк
+
+```{r}
+top_domains
+```
+
+1.teredo.ipv6.microsoft.com	
+2.tools.google.com	
+3.www.apple.com	
+4.time.apple.com	
+5.safebrowsing.clients.google.com	
+6.*\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00	
+7.WPAD	
+8.44.206.168.192.in-addr.arpa	
+9.HPE8AA67	
+10.ISATAP
 
 ## Оценка результатов
 
