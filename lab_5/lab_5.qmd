@@ -14,14 +14,13 @@ editor: visual
 3.  Зекрепить практические навыки использования языка программирования R для обработки данных
 4.  Закрепить знания основных функций обработки данных экосистемы tidyverse языка R
 
-
 ## Ход работы
 
 ## Подготовка данных
 
 ```{r}
-library('dplyr')
-library('tidyverse')
+library(dplyr)
+library(lubridate)
 ```
 
 ## Задание 1
@@ -34,7 +33,6 @@ dat1 <-read.csv(file = "mir.csv-01.csv",nrows = 167)
 
 ```{r}
 dat2 <-read.csv(file = "mir.csv-01.csv",skip = 169)
-
 ```
 
 ## Задание 2
@@ -45,7 +43,6 @@ dat2 <-read.csv(file = "mir.csv-01.csv",skip = 169)
 dat2 <- dat2 %>% mutate_at(vars(Station.MAC, BSSID, Probed.ESSIDs), trimws) %>% mutate_at(vars(Station.MAC, BSSID, Probed.ESSIDs), na_if, "")
 ```
 
-
 ## Задание 3
 
 ### Просмотрите общую структуру данных с помощью функции glimpse()
@@ -55,7 +52,31 @@ dat1 %>% glimpse()
 ```
 
 ```{r}
+dat1 <- dat1 %>% 
+  mutate_at(vars(BSSID, Privacy, Cipher, Authentication, LAN.IP, ESSID), trimws) %>%
+  mutate_at(vars(BSSID, Privacy, Cipher, Authentication, LAN.IP, ESSID), na_if, "") %>% 
+  mutate_at(vars(First.time.seen, Last.time.seen), as.POSIXct, format = "%Y-%m-%d %H:%M:%S")
+
+dat1 %>% head
+```
+
+```{r}
 dat2 %>% glimpse()
+```
+
+```{r}
+dat2 <- dat2 %>% 
+  mutate_at(vars(Station.MAC, BSSID, Probed.ESSIDs), trimws) %>%
+  mutate_at(vars(Station.MAC, BSSID, Probed.ESSIDs), na_if, "")
+
+dat2 <- dat2 %>% 
+  mutate_at(vars(First.time.seen, Last.time.seen), 
+            as.POSIXct, 
+            format = "%Y-%m-%d %H:%M:%S") %>%
+  mutate_at(vars(Power, X..packets), as.integer) %>%
+  filter(!is.na(BSSID))
+  
+dat2 %>% head
 ```
 
 ## Анализ
@@ -67,26 +88,34 @@ dat2 %>% glimpse()
 ### Определить небезопасные точки доступа (без шифрования -- OPN)
 
 ```{r}
-dat1 %>% filter(Privacy == ' OPN')
+openvifi <- dat1 %>% 
+  filter(grepl("OPN", Privacy)) %>%
+  select(BSSID, ESSID) %>%
+  arrange(BSSID) %>%
+  distinct
+
+openvifi
 ```
 
 ## Задание 2
 
 ### Определить производителя для каждого обнаруженного устройства
 
-- E8:28:C1 Eltex Enterprise Ltd.
-- 00:25:00 Apple, Inc.
-- E0:D9:E3 Eltex Enterprise Ltd.
-- 00:26:99 Cisco Systems, Inc
-- 00:03:7A Taiyo Yuden Co., Ltd.
-- 00:03:7F Atheros Communications, Inc.
+-   00:03:7A Taiyo Yuden Co., Ltd.
+-   00:03:7F Atheros Communications, Inc.
+-   00:25:00 Apple, Inc.
+-   00:26:99 Cisco Systems, Inc
+-   E0:D9:E3 Eltex Enterprise Ltd.
+-   E8:28:C1 Eltex Enterprise Ltd.
 
 ## Задание 3
 
 ### Выявить устройства, использующие последнюю версию протокола шифрования WPA3, и названия точек доступа, реализованных на этих устройствах
 
 ```{r}
-dat1 %>% filter(Privacy == " WPA3 WPA2")
+dat1 %>%
+  filter(grepl("WPA3", Privacy)) %>%
+  select(BSSID, ESSID, Privacy)
 ```
 
 ## Задание 4
@@ -94,10 +123,14 @@ dat1 %>% filter(Privacy == " WPA3 WPA2")
 ### Отсортировать точки доступа по интервалу времени, в течение которого они находились на связи, по убыванию.
 
 ```{r}
-a <- difftime(dat1$Last.time.seen, dat1$First.time.seen, units = "secs")
-time_1 <- dat1
-time_1 <- cbind(time_1,a)
-time_1 %>% select(BSSID,ESSID, a) %>% arrange(desc(a))
+dat1_with_intervals <- dat1 %>% 
+  mutate(Time.Interval = Last.time.seen - First.time.seen)
+
+dat1_with_intervals %>%
+  arrange(desc(Time.Interval)) %>%
+  mutate(Time.Interval = seconds_to_period(Time.Interval)) %>%
+  select(BSSID, First.time.seen, Last.time.seen, Time.Interval) %>%
+  head
 ```
 
 ## Задание 5
@@ -105,7 +138,12 @@ time_1 %>% select(BSSID,ESSID, a) %>% arrange(desc(a))
 ### Обнаружить топ-10 самых быстрых точек доступа.
 
 ```{r}
-dat1 %>% select(BSSID,ESSID,Speed) %>% arrange(desc(Speed)) %>% head(10)
+topspots <- dat1 %>%
+  arrange(desc(Speed)) %>%
+  select(BSSID, ESSID, Speed, Privacy) %>%
+  head(10)
+
+topspots
 ```
 
 ## Задание 6
@@ -113,7 +151,14 @@ dat1 %>% select(BSSID,ESSID,Speed) %>% arrange(desc(Speed)) %>% head(10)
 ### Отсортировать точки доступа по частоте отправки запросов (beacons) в единицу времени по их убыванию.
 
 ```{r}
-dat1 %>% select(BSSID,ESSID,X..beacons) %>% arrange(desc(X..beacons))
+dat1_with_beacon_frequency <- dat1_with_intervals %>% 
+    mutate(beacon_rate = as.double(X..beacons) / as.integer(Time.Interval))
+
+dat1_with_beacon_frequency %>%
+  select(BSSID, ESSID, Privacy, X..beacons, Time.Interval, beacon_rate) %>%
+  filter(!is.infinite(beacon_rate)) %>%
+  arrange(desc(beacon_rate)) %>%
+  head
 ```
 
 ## Данные клиентов
@@ -123,7 +168,9 @@ dat1 %>% select(BSSID,ESSID,X..beacons) %>% arrange(desc(X..beacons))
 ### Определить производителя для каждого обнаруженного устройства
 
 ```{r}
-dat2 %>% glimpse()
+dat2 %>%
+  filter(grepl("(..:..:..:)(..:..:..)", BSSID)) %>%
+  distinct(BSSID)
 ```
 
 -   00:03:7F Atheros Communications, Inc.
@@ -142,7 +189,13 @@ dat2 %>% glimpse()
 ### Обнаружить устройства, которые НЕ рандомизируют свой MAC адрес
 
 ```{r}
-dat2 %>% select(Station.MAC) %>% filter(!Station.MAC %in% grep(":",dat2$Station.MAC, value = TRUE))
+dat2 %>%
+  filter(grepl("(..:..:..:)(..:..:..)", BSSID) & !is.na(Probed.ESSIDs)) %>%
+  select(BSSID, Probed.ESSIDs) %>%
+  group_by(BSSID, Probed.ESSIDs) %>%
+  filter(n() > 1) %>%
+  arrange(BSSID) %>%
+  unique()
 ```
 
 ## Задание 3
@@ -150,7 +203,17 @@ dat2 %>% select(Station.MAC) %>% filter(!Station.MAC %in% grep(":",dat2$Station.
 ### Кластеризовать запросы от устройств к точкам доступа по их именам.Определить время появления устройства в зоне радиовидимости и времявыхода его из нее.
 
 ```{r}
-dat2 %>% filter(!is.na(Probed.ESSIDs)) %>% group_by(Station.MAC, Probed.ESSIDs) %>%  summarise("first" = min(First.time.seen), "last" = max(Last.time.seen), Power)
+cData <- dat2 %>%
+  filter(!is.na(Probed.ESSIDs)) %>%
+  group_by(Station.MAC, Probed.ESSIDs) %>%
+  arrange(First.time.seen)
+
+cSum <- cData %>%
+  summarise(Cluster_Start_Time = min(First.time.seen),
+            Cluster_End_Time = max(Last.time.seen),
+            Total_Power = sum(Power))
+
+cSum %>% head(10)
 ```
 
 ## Задание 4
@@ -158,7 +221,12 @@ dat2 %>% filter(!is.na(Probed.ESSIDs)) %>% group_by(Station.MAC, Probed.ESSIDs) 
 ### Оценить стабильность уровня сигнала внури кластера во времени. Выявить наиболее стабильный кластер
 
 ```{r}
-dat2 %>% filter(!is.na(Probed.ESSIDs),!is.na(Power) ) %>% group_by(Station.MAC) %>%  summarise("first" = min(First.time.seen), "last" = max(Last.time.seen), Power) %>% arrange(desc(Power)) %>% head(1)
+sMetric <- cData %>%
+  group_by(Station.MAC, Probed.ESSIDs) %>%
+  summarise(Mean_Power = mean(Power))
+
+sMetric %>%
+  arrange((Mean_Power)) %>% head(1)
 ```
 
 ## Оценка результатов
